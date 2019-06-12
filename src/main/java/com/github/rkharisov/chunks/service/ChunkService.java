@@ -13,10 +13,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -58,7 +58,7 @@ public class ChunkService {
         }
     }
 
-    private void createNewChunk(String path, byte[] hash) {
+    protected void createNewChunk(String path, byte[] hash) {
         ChunkEntity chunk = new ChunkEntity();
         chunk.setPath(path);
         chunk.setHash(hash);
@@ -97,7 +97,7 @@ public class ChunkService {
     }
 
     public ChunkDTO mapToResponse(ChunkEntity entity) {
-        String name = new File(entity.getPath()).getName();
+        String name = Paths.get(entity.getPath()).getFileName().toString();
         return new ChunkDTO(
                 name.substring(0, name.indexOf(MapDirWatcher.MAP_SUFFIX)),
                 entity.getId(),
@@ -131,42 +131,43 @@ public class ChunkService {
     }
 
 
-   /**
+    /**
      * Установить дату следующего повторения на завтра и фазу на DAY
      *
      * @param uuids
      */
     public List<ChunkEntity> dropRepetitionDay(List<UUID> uuids) {
-        return chunkRepository.findAllById(uuids).stream()
+        List<ChunkEntity> chunkEntities = chunkRepository.findAllById(uuids).stream()
                 .map(ce -> {
                     ce.setNextRepeatDate(LocalDate.now().plusDays(1));
                     ce.setCurrentRepetitionInterval(DAY);
                     ce.setMutated(false);
-                    return chunkRepository.save(ce);
+                    return ce;
                 }).collect(Collectors.toList());
+        return chunkRepository.saveAll(chunkEntities);
+
     }
 
     /**
      * Отметить чанк как не нужный для обновления
+     *
      * @param uuids
      * @return
      */
     public List<ChunkEntity> unmutate(List<UUID> uuids) {
-        return chunkRepository.findAllById(uuids).stream()
-                .map(ce -> {
-                    ce.setMutated(false);
-                    return chunkRepository.save(ce);
-                }).collect(Collectors.toList());
+        List<ChunkEntity> chunkEntities = chunkRepository.findAllById(uuids).stream()
+                .map(ce -> ce.setMutated(false))
+                .collect(Collectors.toList());
+        return chunkRepository.saveAll(chunkEntities);
     }
 
     /**
-     *
      * @param dropRequired
-     * @param ids
+     * @param rawUuids
      * @return
      */
-    public List<ChunkEntity> dropOrUnmutate(Boolean dropRequired, String ... ids) {
-        List<UUID> uuids = Arrays.stream(ids)
+    public List<ChunkEntity> dropOrUnmutate(Boolean dropRequired, List<String> rawUuids) {
+        List<UUID> uuids = rawUuids.stream()
                 .map(UUID::fromString).collect(Collectors.toList());
         return dropRequired ? dropRepetitionDay(uuids) : unmutate(uuids);
     }

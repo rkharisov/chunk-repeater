@@ -4,3 +4,4 @@ build/
 out/
 ТЗ
 *.db
+src/main/resources/application.safe.properties

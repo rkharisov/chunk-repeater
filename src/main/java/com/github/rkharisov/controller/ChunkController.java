@@ -16,10 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -69,7 +66,7 @@ public class ChunkController {
     public @ResponseBody
     List<ChunkDTO> dropOrUnmutate(@PathVariable @ApiParam(value = "Flag for determining whether to reset the repeat phase or not", required = true, readOnly = true) Boolean dropRequired,
                                   @PathVariable @ApiParam(value = "UUID of chank to process", required = true, readOnly = true) String ids) {
-        return chunkService.dropOrUnmutate(dropRequired, ids.split("[,|&]"))
+        return chunkService.dropOrUnmutate(dropRequired, Arrays.asList(ids.split("[,|&]")))
                 .stream()
                 .map(chunkService::mapToResponse)
                 .collect(Collectors.toList());
